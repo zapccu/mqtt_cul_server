@@ -8,7 +8,9 @@ wireless communication protocol.
 import json
 import logging
 import os
+import time
 
+from threading import Timer
 
 class SomfyShutter:
     """
@@ -19,11 +21,52 @@ class SomfyShutter:
     """
 
     class SomfyShutterState:
-        def __init__(self, statedir, statefile):
+        def __init__(self, mqtt_client, prefix, statedir, statefile):
+            self.mqtt_client = mqtt_client
+            
             self.statefile = statedir + "/somfy/" + statefile
             with open(self.statefile, "r", encoding='utf8') as file_handle:
                 self.state = json.loads(file_handle.read())
 
+            """
+            Up and down timers
+
+            Add up_time and down_time entries to .json state file of your Somfy device to enable up/down timers
+            """
+            self.otimer = None    # Timer for opening the shutter
+            self.ctimer = None    # Timer for closing the shutter
+            self.cmd_time = 0     # Timestamp of last open or close command. Used to calculate stop position
+            
+            self.base_path = prefix + "/cover/somfy/" + self.state["address"]
+
+            """
+            Send Home Assistant - compatible discovery messages
+
+            for more information about MQTT-discovery and MQTT switches, see
+            https://www.home-assistant.io/docs/mqtt/discovery/
+            https://www.home-assistant.io/integrations/cover.mqtt/
+
+            Somfy is fire-and-forget with no feedback about the state.
+			Anyway state and position are simulated by calculating position based
+			on up_time and down_time or as a result of OPEN/CLOSE commands
+            """
+
+            configuration = {
+                "~": self.base_path,
+                "command_topic": "~/set",
+                "payload_open": "OPEN",
+                "payload_close": "CLOSE",
+                "payload_stop": "STOP",
+                "position_topic": self.base_path + "/position",
+                "state_topic": self.base_path + "/state",
+                "optimistic": True,
+                "device_class": self.state["device_class"],
+                "name": self.state["name"],
+                "unique_id": "somfy_" + self.state["address"],
+            }
+
+            self.mqtt_client.publish(self.base_path + "/config", payload=json.dumps(configuration), retain=True)
+                  
         def save(self):
             """Save state to JSON file"""
             with open(self.statefile, "w", encoding='utf8') as file_handle:
@@ -39,6 +82,130 @@ class SomfyShutter:
             self.state["enc_key"]      = (self.state["enc_key"] + 1) % 0x10
             self.save()
 
+            """ don't loose the code during testing ;) """
+            print("next rolling code for device", self.state["address"], " is", self.state["rolling_code"])
+            logging.info("next rolling code for device %s is %d", self.state["address"], self.state["rolling_code"])
+
+        def reset_timers(self):
+            """ Reset timer functions """
+            if self.otimer is not None:
+                self.otimer.cancel()
+                self.otimer = None
+            if self.ctimer is not None:
+                self.ctimer.cancel()
+                self.ctimer = None
+            self.cmd_timer = 0
+
+        def timer_open(self):
+            """ Timer function called when shutter has been opened """
+            self.mqtt_client.publish(self.base_path + "/state", payload="open", retain=True)
+            self.mqtt_client.publish(self.base_path + "/position", payload=100, retain=True)
+
+        def timer_closed(self):
+            """ Timer function called when shutter has been closed """
+            self.mqtt_client.publish(self.base_path + "/state", payload="closed", retain=True)
+            self.mqtt_client.publish(self.base_path + "/position", payload=0, retain=True)
+
+        def update_state(self, cmd):
+            """ publish state and position """
+            if cmd == "OPEN":
+                if "up_time" in self.state:
+                    self.mqtt_client.publish(self.base_path + "/state", payload="opening", retain=True)
+                    self.reset_timers()
+                    self.cmd_time = time.time()
+                    self.otimer = Timer(self.state["up_time"], self.timer_open)
+                else:
+                    self.mqtt_client.publish(self.base_path + "/state", payload="open", retain=True)
+                    self.mqtt_client.publish(self.base_path + "/position", payload=100, retain=True)
+            elif cmd == "CLOSE":
+                if "down_time" in self.state:
+                    self.mqtt_client.publish(self.base_path + "/state", payload="closing", retain=True)
+                    self.reset_timers()
+                    self.cmd_time = time.time()
+                    self.ctimer = Timer(self.state["down_time"], self.timer_close)
+                else:
+                    self.mqtt_client.publish(self.base_path + "/state", payload="closed", retain=True)
+                    self.mqtt_client.publish(self.base_path + "/position", payload=0, retain=True)
+            elif cmd == "STOP":
+                pos = 50    # Default position, if exact position cannot be calculated
+                if self.otimer is not None:
+                    self.otimer.cancel()
+                    self.otimer = None
+                    if self.cmd_time > 0:
+                        ti = time.time() - self.cmd_time
+                        pos = int(ti/self.state["up_time"]*100)
+                elif self.ctimer is not None:
+                    self.ctimer.cancel()
+                    self.ctimer = None
+                    if self.cmd_time > 0:
+                        ti = time.time() - self.cmd_time
+                        pos = int(ti/self.state["down_time"]*100)
+
+                pos = max(min(pos,100), 0)    # Make sure that pos is in range 0..100
+
+                """ publish stopped state and calculated position """
+                self.mqtt_client.publish(self.base_path + "/state", payload="stopped", retain=True)
+                self.mqtt_client.publish(self.base_path + "/position", payload=pos, retain=True)
+                self.cmd_time = 0
+
+        def calculate_checksum(self, command):
+            """
+            Calculate checksum for command string
+
+            From https://pushstack.wordpress.com/somfy-rts-protocol/ :
+            The checksum is calculated by doing a XOR of all nibbles of the frame.
+            To generate a checksum for a frame set the 'cks' field to 0 before
+            calculating the checksum.
+            """
+            cmd = bytearray(command, "utf-8")
+            checksum = 0
+            for char in cmd:
+                checksum = checksum ^ char ^ (char >> 4)
+            checksum = checksum & 0xF
+            return "{:01X}".format(checksum)
+
+        def command_string(self, command):
+            """
+            A Somfy command is a hex string of the following form: KKC0RRRRSSSSSS
+
+            KK - Encryption key: First byte always 'A', second byte varies
+            C - Command (1 = My, 2 = Up, 4 = Down, 8 = Prog)
+            0 - Checksum (set to 0 for calculating checksum)
+            RRRR - Rolling code
+            SSSSSS - Address (= remote channel)
+            """
+            commands = {
+                "my": 1,
+                "up": 2,
+                "my-up": 3,
+                "down": 4,
+                "my-down": 5,
+                "up-down": 6,
+                "my-up-down": 7,
+                "prog": 8,
+                "enable-sun": 9,
+                "disable-sun": 10,
+            }
+            if command in commands:
+                command_string = "A{:01X}{:01X}0{:04X}{}".format(
+                    self.state["enc_key"],
+                    commands[command],
+                    self.state["rolling_code"],
+                    self.state["address"],
+                )
+            else:
+                raise NameError("unknown command")
+            command_string = (
+                command_string[:3]
+                + self.calculate_checksum(command_string)
+                + command_string[4:]
+            )
+            command_string = "Ys" + command_string + "\n"
+            return command_string.encode()
+
+    """
+	Implementation of class SomfyShutter
+	"""
     def __init__(self, cul, mqtt_client, prefix, statedir):
         self.cul = cul
         self.prefix = prefix
@@ -46,103 +213,15 @@ class SomfyShutter:
         self.devices = []
         for statefile in os.listdir(statedir + "/somfy/"):
             if ".json" in statefile:
-                self.devices.append(self.SomfyShutterState(statedir, statefile))
-
-        for device in self.devices:
-            # send messages for device discovery
-            self.send_discovery(device, mqtt_client)
+                self.devices.append(self.SomfyShutterState(mqtt_client, prefix, statedir, statefile))
 
     @classmethod
     def get_component_name(cls):
         return "somfy"
 
-    def send_discovery(self, device, mqtt_client):
-        """
-        Send Home Assistant - compatible discovery messages
-
-        for more information about MQTT-discovery and MQTT switches, see
-        https://www.home-assistant.io/docs/mqtt/discovery/
-        https://www.home-assistant.io/integrations/cover.mqtt/
-
-        There's no state topic, as Somfy is fire-and-forget with no
-        feedback about the state.
-        """
-
-        base_path = self.prefix + "/cover/somfy/" + device.state["address"]
-
-        configuration = {
-            "~": base_path,
-            "command_topic": "~/set",
-            "payload_open": "OPEN",
-            "payload_close": "CLOSE",
-            "payload_stop": "STOP",
-            "optimistic": True,
-            "device_class": device.state["device_class"],
-            "name": device.state["name"],
-            "unique_id": "somfy_" + device.state["address"],
-        }
-
-        topic = base_path + "/config"
-        mqtt_client.publish(topic, payload=json.dumps(configuration), retain=True)
-
-    def calculate_checksum(self, command):
-        """
-        Calculate checksum for command string
-
-        From https://pushstack.wordpress.com/somfy-rts-protocol/ :
-        The checksum is calculated by doing a XOR of all nibbles of the frame.
-        To generate a checksum for a frame set the 'cks' field to 0 before
-        calculating the checksum.
-        """
-        cmd = bytearray(command, "utf-8")
-        checksum = 0
-        for char in cmd:
-            checksum = checksum ^ char ^ (char >> 4)
-        checksum = checksum & 0xF
-        return "{:01X}".format(checksum)
-
-    def command_string(self, command, device):
-        """
-        A Somfy command is a hex string of the following form: KKC0RRRRSSSSSS
-
-        KK - Encryption key: First byte always 'A', second byte varies
-        C - Command (1 = My, 2 = Up, 4 = Down, 8 = Prog)
-        0 - Checksum (set to 0 for calculating checksum)
-        RRRR - Rolling code
-        SSSSSS - Address (= remote channel)
-        """
-        commands = {
-            "my": 1,
-            "up": 2,
-            "my-up": 3,
-            "down": 4,
-            "my-down": 5,
-            "up-down": 6,
-            "my-up-down": 7,
-            "prog": 8,
-            "enable-sun": 9,
-            "disable-sun": 10,
-        }
-        if command in commands:
-            command_string = "A{:01X}{:01X}0{:04X}{}".format(
-                device.state["enc_key"],
-                commands[command],
-                device.state["rolling_code"],
-                device.state["address"],
-            )
-        else:
-            raise NameError("unknown command")
-        command_string = (
-            command_string[:3]
-            + self.calculate_checksum(command_string)
-            + command_string[4:]
-        )
-        command_string = "Ys" + command_string + "\n"
-        return command_string.encode()
-
     def send_command(self, command, device):
         """Send command string via CUL device"""
-        command_string = self.command_string(command, device)
+        command_string = device.command_string(command)
         logging.info("sending command string %s to %s", command_string, device.state["name"])
         self.cul.send_command(command_string)
         device.increase_rolling_code()
@@ -163,18 +242,15 @@ class SomfyShutter:
         for d in self.devices:
             if d.state["address"] == address:
                 device = d
+                break
         if not device:
             raise ValueError("Device not found: %s", address)
 
         if topic == "set":
-            if command == "OPEN":
-                self.send_command("up", device)
-            elif command == "CLOSE":
-                self.send_command("down", device)
-            elif command == "STOP":
-                self.send_command("my", device)
-            elif command == "PROG":
-                self.send_command("prog", device)
+            cmd_lookup = { "OPEN": "up", "CLOSE": "down", "STOP": "my", "PROG": "prog" }
+            if command in cmd_lookup:
+                self.send_command(cmd_lookup[command], device)
+                device.update(command)
             else:
                 raise ValueError("Command %s is not supported", command)
         else:
