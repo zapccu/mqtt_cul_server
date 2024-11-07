@@ -22,6 +22,8 @@ file is:
   "address": "B0C004",
   "enc_key": 1,
   "rolling_code": 4125,
+  "up_time": 12,
+  "down_time": 10
 }
 ```
 
@@ -39,6 +41,10 @@ The encryption key is updated by the software each time a command is sent. If it
 doesn't match the state in the shutters, they will not accept the command. This
 is the primary security function of Somfy. If you loose this key or only have an
 outdated one from a backup, you need to re-pair.
+
+The up_time and down_time are optional. These parameters specify the time needed
+to switch between open and closed (0 and 100%) state. The values are used to
+calculate the current position if the shutter is stopped.
 
 The CUL is paired as a new, additional remote. You can continue using the existing
 remote in parallel.
