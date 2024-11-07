@@ -204,8 +204,8 @@ class SomfyShutter:
             return command_string.encode()
 
     """
-	Implementation of class SomfyShutter
-	"""
+    Implementation of class SomfyShutter
+    """
     def __init__(self, cul, mqtt_client, prefix, statedir):
         self.cul = cul
         self.prefix = prefix
