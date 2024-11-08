@@ -21,7 +21,7 @@ class SomfyShutter:
     """
 
     class SomfyShutterState:
-        def __init__(self, mqtt_client, prefix, statedir, statefile, debug):
+        def __init__(self, mqtt_client, prefix, statedir, statefile):
             self.mqtt_client = mqtt_client
             
             self.statefile = statedir + "/somfy/" + statefile
