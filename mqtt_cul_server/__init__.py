@@ -29,7 +29,7 @@ class MQTT_CUL_Server:
 		# Register signal handler
         signal.signal(signal.SIGTERM, self.signal_handler)
 
-    def signal_handler(self, signal, frame):
+    def signal_handler(self, sig, frame):
         """ called when SIGTERM received """
         self.cul.exit_loop = True
         signal.pthread_kill(self.mqtt_listener.ident, signal.SIGINT)
