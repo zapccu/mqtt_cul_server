@@ -21,7 +21,7 @@ class SomfyShutter:
     """
 
     class SomfyShutterState:
-        def __init__(self, mqtt_client, prefix, statedir, statefile):
+        def __init__(self, mqtt_client, prefix, statedir, statefile, debug):
             self.mqtt_client = mqtt_client
             
             self.statefile = statedir + "/somfy/" + statefile
@@ -88,9 +88,13 @@ class SomfyShutter:
             logging.info("next rolling code for device %s is %d", self.state["address"], self.state["rolling_code"])
 
         def publish_devstate(self, devstate, position = None):
-            """ Publish state and position of shutter """
+            """
+            Publish state and position of shutter.
+            Save state if position is specified and has changed
+            """
+            print(f"publishing devstate={devstate}, position={position}")
             self.mqtt_client.publish(self.base_path + "/state", payload=devstate, retain=True)
-            if position is not None:
+            if position is not None and position != self.state["current_pos"]:
                 self.state["current_pos"] = position
                 self.mqtt_client.publish(self.base_path + "/position", payload=position, retain=True)
                 self.save()
@@ -107,16 +111,19 @@ class SomfyShutter:
 
         def timer_open(self):
             """ Timer function called when shutter has been opened """
+            print("Timer open called")
             self.publish_devstate("open", position=100)
 
         def timer_closed(self):
             """ Timer function called when shutter has been closed """
+            print("Timer closed called")
             self.publish_devstate("closed", position=0)
 
         def update_state(self, cmd):
             """ calculate position, publish state and position """
             if cmd == "OPEN":
                 if "up_time" in self.state:
+                    print(f"opening. setting timer to {self.state['up_time']}")
                     self.publish_devstate("opening")
                     self.reset_timers()
                     self.cmd_time = time.time()
@@ -127,6 +134,7 @@ class SomfyShutter:
                     
             elif cmd == "CLOSE":
                 if "down_time" in self.state:
+                    print(f"opening. setting timer to {self.state['down_time']}")
                     self.publish_devstate("closing")
                     self.reset_timers()
                     self.cmd_time = time.time()
@@ -136,8 +144,7 @@ class SomfyShutter:
                     self.publish_devstate("closed", position=0)
                     
             elif cmd == "STOP":
-                current_pos = 100 if "current_pos" not in self.state else self.state["current_pos"]               
-                pos = 50    # Default position, if exact position cannot be calculated
+                current_pos = 50 if "current_pos" not in self.state else self.state["current_pos"]               
                 current_time = time.time()
                 
                 if self.otimer is not None:
@@ -145,18 +152,18 @@ class SomfyShutter:
                     self.otimer = None
                     if self.cmd_time > 0:
                         ti = current_time - self.cmd_time
-                        pos = current_pos + int(ti / self.state["up_time"] * 100) * self.direction
+                        current_pos += int(ti / self.state["up_time"] * 100) * self.direction
                 elif self.ctimer is not None:
                     self.ctimer.cancel()
                     self.ctimer = None
                     if self.cmd_time > 0:
                         ti = current_time - self.cmd_time
-                        pos = current_pos + int(ti / self.state["down_time"] * 100) * self.direction
+                        current_pos += int(ti / self.state["down_time"] * 100) * self.direction
 
-                pos = max(min(pos,100), 0)    # Make sure that pos is in range 0..100
+                current_pos = max(min(current_pos,100), 0)    # Make sure that pos is in range 0..100
 
                 """ publish stopped state and calculated position """
-                self.publish_devstate("stopped", position=pos)
+                self.publish_devstate("stopped", position=current_pos)
                 self.cmd_time = 0
                 self.direction = 0                
 
@@ -279,7 +286,7 @@ class SomfyShutter:
             elif command == "STOP" and self.calibrate == 1:
                 """ measure down_time """
                 self.calibrate = 2
-                device.state["down_time"] = time.time() - self.cal_start
+                device.state["down_time"] = int(time.time() - self.cal_start)
                 self.send_command("my", device)    # also save state to file incl. down_time
                 time.sleep(2)
                 self.cal_start = time.time()
@@ -289,7 +296,7 @@ class SomfyShutter:
                 """ measure up_time and stop calibration """
                 self.calibrate = 0
                 self.cal_start = 0
-                device.state["up_time"] = time.time() - self.cal_start
+                device.state["up_time"] = int(time.time() - self.cal_start)
                 self.send_command("my", device)    # also save state to file incl. up_time
                 device.publish_devstate("open", 100)
                 
