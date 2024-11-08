@@ -28,6 +28,9 @@ The software supports both the 433 MHz and 868 MHz hardware.
 For the CUL, you just need to configure the serial device of the dongle in
 `mqtt_cul_server.ini`.
 
+The name of the configuration file can be changed by specifying command line
+option `--config Filename`.
+
 ### Intertechno
 
 For Intertechno-based switches, you need to configure the system ID,
