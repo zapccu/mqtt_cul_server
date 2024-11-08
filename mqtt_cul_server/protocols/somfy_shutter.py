@@ -34,8 +34,8 @@ class SomfyShutter:
             Add up_time and down_time entries to .json state file of your Somfy device to enable up/down timers
             """
             self.drv_timer = None    # Timer for opening / closing the shutter
-            self.cmd_time = 0     # Timestamp of last open or close command. Used to calculate stop position
-            self.direction = 0    # 1 = opening, -1 = closing, 0 = stopped
+            self.cmd_time = 0        # Timestamp of last open or close command. Used to calculate stop position
+            self.direction = 0       # 1 = opening, -1 = closing, 0 = stopped
             
             self.base_path = prefix + "/cover/somfy/" + self.state["address"]
 
@@ -65,7 +65,19 @@ class SomfyShutter:
                 "unique_id": "somfy_" + self.state["address"],
             }
 
+            # Publish configuration
             self.mqtt_client.publish(self.base_path + "/config", payload=json.dumps(configuration), retain=True)
+            
+			# Publish current state and position
+            if "current_pos" in self.state:
+                if self.state["current_pos"] == 100:
+                    self.publish_devstate("open", 100)
+                elif self.state["current_pos"] == 0:
+                    self.publish_devstate("closed", 0)
+                else:
+                    self.publish_devstate("stopped", self.state["current_pos"])
+            else:
+                self.publish_devstate("stopped", 50)    # Current position is unknown
                   
         def save(self):
             """Save state to JSON file"""
