@@ -30,20 +30,20 @@ file is:
 
 The filename doesn't matter as long as it ends with `.json`.
 
-The `name`attribute is just for reporting a user-friedly name on device discovery,
+The `name` attribute is just for reporting a user-friedly name on device discovery,
 it is not used for any other purpose.
 
 Currently, supported device classes are `shutter` and `shade`.
 
-The address must be a 6 character long hexadecimal address. You can choose freely,
+The `address` must be a 6 character long hexadecimal address. You can choose freely,
 your shutters will learn it during pairing.
 
-The encryption key is updated by the software each time a command is sent. If it
-doesn't match the state in the shutters, they will not accept the command. This
-is the primary security function of Somfy. If you loose this key or only have an
-outdated one from a backup, you need to re-pair.
+The encryption key (`enc_key`) and rolling_code are updated by the software each time
+a command is sent. If it doesn't match the state in the shutters, they will not accept
+the command. This is the primary security function of Somfy. If you loose this key or
+only have an outdated one from a backup, you need to re-pair.
 
-The up_time and down_time are optional. These parameters specify the time needed
+The `up_time` and `down_time` values are optional. These parameters specify the time needed
 for opening or closing the shutter. The values are used to calculate the current
 position if the shutter is stopped.
 One can either configure these values manually (stop the time by hand) or automatically
@@ -52,8 +52,9 @@ changing to "calibrating" and the shutter is closing. As soon as the shutter is
 closed, press STOP. Two seconds later the shutter will be opened. When it's open,
 press STOP again.
 Calibration can be interrupted by sending the CALIBRATE command again.
+If up_time and down_time are not speicified, only states "open" and "closed" are reported.
 
-current_pos is the current position of a shutter. The default position is 100 (open).
+`current_pos` is the current position of a shutter. The default position is 100 (open).
 
 The CUL is paired as a new, additional remote. You can continue using the existing
 remote in parallel.
