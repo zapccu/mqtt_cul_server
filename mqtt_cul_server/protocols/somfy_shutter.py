@@ -295,7 +295,7 @@ class SomfyShutter:
                 
             elif command in cmd_lookup:
                 self.send_command(cmd_lookup[command], device)
-                device.update(command)
+                device.update_state(command)
                 
             else:
                 raise ValueError("Command %s is not supported", command)
