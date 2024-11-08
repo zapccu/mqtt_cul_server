@@ -262,6 +262,7 @@ class SomfyShutter:
 
         if topic == "set":
             cmd_lookup = { "OPEN": "up", "CLOSE": "down", "STOP": "my", "PROG": "prog" }
+            
             if command == "CALIBRATE":
                 if self.calibrate > 0:
                     """ interrupt calibration """
@@ -274,6 +275,7 @@ class SomfyShutter:
                     self.cal_start = time.time()
                     self.send_command("down", device)
                     device.publish_devstate("calibrating")
+                    
             elif command == "STOP" and self.calibrate == 1:
                 """ measure down_time """
                 self.calibrate = 2
@@ -282,6 +284,7 @@ class SomfyShutter:
                 time.sleep(2)
                 self.cal_start = time.time()
                 self.send_command("up", device)
+                
             elif command == "STOP" and self.calibrate == 2:
                 """ measure up_time and stop calibration """
                 self.calibrate = 0
@@ -289,9 +292,11 @@ class SomfyShutter:
                 device.state["up_time"] = time.time() - self.cal_start
                 self.send_command("my", device)    # also save state to file incl. up_time
                 device.publish_devstate("open", 100)
+                
             elif command in cmd_lookup:
                 self.send_command(cmd_lookup[command], device)
                 device.update(command)
+                
             else:
                 raise ValueError("Command %s is not supported", command)
         else:
