@@ -139,7 +139,7 @@ class SomfyShutter:
                     self.reset_timers()
                     self.cmd_time = time.time()
                     self.direction = -1
-                    self.ctimer = Timer(self.state["down_time"], self.timer_close)
+                    self.ctimer = Timer(self.state["down_time"], self.timer_closed)
                 else:
                     self.publish_devstate("closed", position=0)
                     
