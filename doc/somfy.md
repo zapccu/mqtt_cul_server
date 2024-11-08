@@ -23,7 +23,8 @@ file is:
   "enc_key": 1,
   "rolling_code": 4125,
   "up_time": 12,
-  "down_time": 10
+  "down_time": 10,
+  "current_pos": 100
 }
 ```
 
@@ -43,11 +44,20 @@ is the primary security function of Somfy. If you loose this key or only have an
 outdated one from a backup, you need to re-pair.
 
 The up_time and down_time are optional. These parameters specify the time needed
-to switch between open and closed (0 and 100%) state. The values are used to
-calculate the current position if the shutter is stopped.
+for opening or closing the shutter. The values are used to calculate the current
+position if the shutter is stopped.
+One can either configure these values manually (stop the time by hand) or automatically
+by sending a CALIBRATE command. After sending CALIBRATE the state of the device is
+changing to "calibrating" and the shutter is closing. As soon as the shutter is 
+closed, press STOP. Two seconds later the shutter will be opened. When it's open,
+press STOP again.
+Calibration can be interrupted by sending the CALIBRATE command again.
+
+current_pos is the current position of a shutter. The default position is 100 (open).
 
 The CUL is paired as a new, additional remote. You can continue using the existing
 remote in parallel.
+
 
 ## Pairing
 

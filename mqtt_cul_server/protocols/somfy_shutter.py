@@ -114,7 +114,7 @@ class SomfyShutter:
             self.publish_devstate("closed", position=0)
 
         def update_state(self, cmd):
-            """ publish state and position """
+            """ calculate position, publish state and position """
             if cmd == "OPEN":
                 if "up_time" in self.state:
                     self.publish_devstate("opening")
@@ -278,7 +278,7 @@ class SomfyShutter:
                 """ measure down_time """
                 self.calibrate = 2
                 device.state["down_time"] = time.time() - self.cal_start
-                self.send_command("my", device)
+                self.send_command("my", device)    # also save state to file incl. down_time
                 time.sleep(2)
                 self.cal_start = time.time()
                 self.send_command("up", device)
@@ -287,9 +287,8 @@ class SomfyShutter:
                 self.calibrate = 0
                 self.cal_start = 0
                 device.state["up_time"] = time.time() - self.cal_start
-                self.send_command("my", device)
+                self.send_command("my", device)    # also save state to file incl. up_time
                 device.publish_devstate("open", 100)
-                device.save()
             elif command in cmd_lookup:
                 self.send_command(cmd_lookup[command], device)
                 device.update(command)
