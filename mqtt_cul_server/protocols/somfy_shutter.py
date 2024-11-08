@@ -105,7 +105,7 @@ class SomfyShutter:
             """
             print(f"publishing devstate={devstate}, position={position}")
             self.mqtt_client.publish(self.base_path + "/state", payload=devstate, retain=True)
-            if position is not None and position != self.state["current_pos"]:
+            if position is not None and ("current_pos" not in self.state or position != self.state["current_pos"]):
                 self.state["current_pos"] = position
                 self.mqtt_client.publish(self.base_path + "/position", payload=position, retain=True)
                 self.save()
