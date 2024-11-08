@@ -86,3 +86,5 @@ class MQTT_CUL_Server:
         # thread to listen for received RF messages
         cul_listener = threading.Thread(target=self.cul.listen, args=[self.on_rf_message])
         cul_listener.start()
+        print("CUL listener terminated. Sending stop to mqtt")
+        signal.pthread_kill(mqtt_listener.ident, signal.SIGTSTP)
