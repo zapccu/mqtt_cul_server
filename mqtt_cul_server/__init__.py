@@ -1,5 +1,6 @@
 import logging
 import sys
+import signal
 import threading
 import paho.mqtt.client as mqtt
 from . import cul
@@ -24,7 +25,13 @@ class MQTT_CUL_Server:
             self.components["somfy"] = somfy_shutter.SomfyShutter(self.cul, self.mqtt_client, self.prefix, statedir)
         if config["lacrosse"].getboolean("enabled"):
             self.components["lacrosse"] = lacrosse.LaCrosse(self.cul, self.mqtt_client, self.prefix)
+            
+        signal.signal(signal.SIGTERM, self.signal_handler)
 
+    def signal_handler(self, signal, frame):
+        if signal == signal.SIGTERM:
+            self.cul.exit_loop = True
+            
     def get_mqtt_client(self, mqtt_config):
         mqtt_client = mqtt.Client()
         mqtt_client.enable_logger()

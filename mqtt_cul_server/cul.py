@@ -9,6 +9,9 @@ class Cul(object):
 
     def __init__(self, serial_port, baud_rate=115200, test=False):
         """Create instance with a given serial port"""
+        
+        self.exit_loop = False
+        
         if test:
             self.serial = sys.stderr
             self.test = True
@@ -48,7 +51,7 @@ class Cul(object):
 
 
     def listen(self, callback):
-        while True:
+        while not self.exit_loop:
             # readline() blocks until message is available
             try:
                 message = self.serial.readline().decode("utf-8")
