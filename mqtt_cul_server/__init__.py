@@ -32,7 +32,8 @@ class MQTT_CUL_Server:
     def signal_handler(self, signal, frame):
         """ called when SIGTERM received """
         self.cul.exit_loop = True
-            
+        signal.pthread_kill(self.mqtt_listener.ident, signal.SIGINT)
+           
     def get_mqtt_client(self, mqtt_config):
         mqtt_client = mqtt.Client()
         mqtt_client.enable_logger()
@@ -81,10 +82,8 @@ class MQTT_CUL_Server:
     def start(self):
         """Start multiple threads to listen for MQTT and RF messages"""
         # thread to listen for MQTT command messages
-        mqtt_listener = threading.Thread(target=self.mqtt_client.loop_forever)
-        mqtt_listener.start()
+        self.mqtt_listener = threading.Thread(target=self.mqtt_client.loop_forever)
+        self.mqtt_listener.start()
         # thread to listen for received RF messages
         cul_listener = threading.Thread(target=self.cul.listen, args=[self.on_rf_message])
         cul_listener.start()
-        print("CUL listener terminated. Sending stop to mqtt")
-        signal.pthread_kill(mqtt_listener.ident, signal.SIGTSTP)
