@@ -33,8 +33,7 @@ class SomfyShutter:
 
             Add up_time and down_time entries to .json state file of your Somfy device to enable up/down timers
             """
-            self.otimer = None    # Timer for opening the shutter
-            self.ctimer = None    # Timer for closing the shutter
+            self.drv_timer = None    # Timer for opening / closing the shutter
             self.cmd_time = 0     # Timestamp of last open or close command. Used to calculate stop position
             self.direction = 0    # 1 = opening, -1 = closing, 0 = stopped
             
@@ -99,15 +98,11 @@ class SomfyShutter:
                 self.mqtt_client.publish(self.base_path + "/position", payload=position, retain=True)
                 self.save()
 
-        def reset_timers(self):
+        def reset_timer(self):
             """ Reset timer functions """
-            if self.otimer is not None:
-                self.otimer.cancel()
-                self.otimer = None
-            if self.ctimer is not None:
-                self.ctimer.cancel()
-                self.ctimer = None
-            self.cmd_timer = 0
+            if self.drv_timer is not None:
+                self.drv_timer.cancel()
+                self.drv_timer = None
 
         def timer_open(self):
             """ Timer function called when shutter has been opened """
@@ -119,27 +114,31 @@ class SomfyShutter:
             print("Timer closed called")
             self.publish_devstate("closed", position=0)
 
+        def start_timer(self, devstate):
+            self.publish_devstate(devstate)
+            self.reset_timer()
+            self.cmd_time = time.time()
+            if devstate == "opening":
+                self.direction = 1
+                self.drvtimer = Timer(self.state["up_time"], self.timer_open)
+            else:
+                self.direction = -1
+                self.drvtimer = Timer(self.state["down_time"], self.timer_closed)
+            self.drv_timer.start()
+            
         def update_state(self, cmd):
             """ calculate position, publish state and position """
             if cmd == "OPEN":
                 if "up_time" in self.state:
                     print(f"opening. setting timer to {self.state['up_time']}")
-                    self.publish_devstate("opening")
-                    self.reset_timers()
-                    self.cmd_time = time.time()
-                    self.direction = 1
-                    self.otimer = Timer(self.state["up_time"], self.timer_open)
+                    self.start_timer("opening")
                 else:
                     self.publish_devstate("open", position=100)
                     
             elif cmd == "CLOSE":
                 if "down_time" in self.state:
                     print(f"opening. setting timer to {self.state['down_time']}")
-                    self.publish_devstate("closing")
-                    self.reset_timers()
-                    self.cmd_time = time.time()
-                    self.direction = -1
-                    self.ctimer = Timer(self.state["down_time"], self.timer_closed)
+                    self.start_timer("closing")
                 else:
                     self.publish_devstate("closed", position=0)
                     
@@ -147,18 +146,12 @@ class SomfyShutter:
                 current_pos = 50 if "current_pos" not in self.state else self.state["current_pos"]               
                 current_time = time.time()
                 
-                if self.otimer is not None:
-                    self.otimer.cancel()
-                    self.otimer = None
+                if self.drv_timer is not None and self.direction != 0:
+                    self.reset_timer()
                     if self.cmd_time > 0:
                         ti = current_time - self.cmd_time
-                        current_pos += int(ti / self.state["up_time"] * 100) * self.direction
-                elif self.ctimer is not None:
-                    self.ctimer.cancel()
-                    self.ctimer = None
-                    if self.cmd_time > 0:
-                        ti = current_time - self.cmd_time
-                        current_pos += int(ti / self.state["down_time"] * 100) * self.direction
+                        dt = "up_time" if self.direction == 1 else "down_time"
+                        current_pos += int(ti / self.state[dt] * 100) * self.direction
 
                 current_pos = max(min(current_pos,100), 0)    # Make sure that pos is in range 0..100
 
