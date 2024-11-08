@@ -36,6 +36,7 @@ class SomfyShutter:
             self.otimer = None    # Timer for opening the shutter
             self.ctimer = None    # Timer for closing the shutter
             self.cmd_time = 0     # Timestamp of last open or close command. Used to calculate stop position
+            self.direction = 0    # 1 = opening, -1 = closing, 0 = stopped
             
             self.base_path = prefix + "/cover/somfy/" + self.state["address"]
 
@@ -86,6 +87,14 @@ class SomfyShutter:
             print("next rolling code for device", self.state["address"], " is", self.state["rolling_code"])
             logging.info("next rolling code for device %s is %d", self.state["address"], self.state["rolling_code"])
 
+        def publish_devstate(self, devstate, position = None):
+            """ Publish state and position of shutter """
+            self.mqtt_client.publish(self.base_path + "/state", payload=devstate, retain=True)
+            if position is not None:
+                self.state["current_pos"] = position
+                self.mqtt_client.publish(self.base_path + "/position", payload=position, retain=True)
+                self.save()
+
         def reset_timers(self):
             """ Reset timer functions """
             if self.otimer is not None:
@@ -98,55 +107,58 @@ class SomfyShutter:
 
         def timer_open(self):
             """ Timer function called when shutter has been opened """
-            self.mqtt_client.publish(self.base_path + "/state", payload="open", retain=True)
-            self.mqtt_client.publish(self.base_path + "/position", payload=100, retain=True)
+            self.publish_devstate("open", position=100)
 
         def timer_closed(self):
             """ Timer function called when shutter has been closed """
-            self.mqtt_client.publish(self.base_path + "/state", payload="closed", retain=True)
-            self.mqtt_client.publish(self.base_path + "/position", payload=0, retain=True)
+            self.publish_devstate("closed", position=0)
 
         def update_state(self, cmd):
             """ publish state and position """
             if cmd == "OPEN":
                 if "up_time" in self.state:
-                    self.mqtt_client.publish(self.base_path + "/state", payload="opening", retain=True)
+                    self.publish_devstate("opening")
                     self.reset_timers()
                     self.cmd_time = time.time()
+                    self.direction = 1
                     self.otimer = Timer(self.state["up_time"], self.timer_open)
                 else:
-                    self.mqtt_client.publish(self.base_path + "/state", payload="open", retain=True)
-                    self.mqtt_client.publish(self.base_path + "/position", payload=100, retain=True)
+                    self.publish_devstate("open", position=100)
+                    
             elif cmd == "CLOSE":
                 if "down_time" in self.state:
-                    self.mqtt_client.publish(self.base_path + "/state", payload="closing", retain=True)
+                    self.publish_devstate("closing")
                     self.reset_timers()
                     self.cmd_time = time.time()
+                    self.direction = -1
                     self.ctimer = Timer(self.state["down_time"], self.timer_close)
                 else:
-                    self.mqtt_client.publish(self.base_path + "/state", payload="closed", retain=True)
-                    self.mqtt_client.publish(self.base_path + "/position", payload=0, retain=True)
+                    self.publish_devstate("closed", position=0)
+                    
             elif cmd == "STOP":
+                current_pos = 100 if "current_pos" not in self.state else self.state["current_pos"]               
                 pos = 50    # Default position, if exact position cannot be calculated
+                current_time = time.time()
+                
                 if self.otimer is not None:
                     self.otimer.cancel()
                     self.otimer = None
                     if self.cmd_time > 0:
-                        ti = time.time() - self.cmd_time
-                        pos = int(ti/self.state["up_time"]*100)
+                        ti = current_time - self.cmd_time
+                        pos = current_pos + int(ti / self.state["up_time"] * 100) * self.direction
                 elif self.ctimer is not None:
                     self.ctimer.cancel()
                     self.ctimer = None
                     if self.cmd_time > 0:
-                        ti = time.time() - self.cmd_time
-                        pos = int(ti/self.state["down_time"]*100)
+                        ti = current_time - self.cmd_time
+                        pos = current_pos + int(ti / self.state["down_time"] * 100) * self.direction
 
                 pos = max(min(pos,100), 0)    # Make sure that pos is in range 0..100
 
                 """ publish stopped state and calculated position """
-                self.mqtt_client.publish(self.base_path + "/state", payload="stopped", retain=True)
-                self.mqtt_client.publish(self.base_path + "/position", payload=pos, retain=True)
+                self.publish_devstate("stopped", position=pos)
                 self.cmd_time = 0
+                self.direction = 0                
 
         def calculate_checksum(self, command):
             """
@@ -209,6 +221,8 @@ class SomfyShutter:
     def __init__(self, cul, mqtt_client, prefix, statedir):
         self.cul = cul
         self.prefix = prefix
+        self.calibrate = 0
+        self.cal_start = 0
 
         self.devices = []
         for statefile in os.listdir(statedir + "/somfy/"):
@@ -248,7 +262,35 @@ class SomfyShutter:
 
         if topic == "set":
             cmd_lookup = { "OPEN": "up", "CLOSE": "down", "STOP": "my", "PROG": "prog" }
-            if command in cmd_lookup:
+            if command == "CALIBRATE":
+                if self.calibrate > 0:
+                    """ interrupt calibration """
+                    self.calibrate = 0
+                    self.cal_start = 0
+                    device.publish_devstate("stopped")
+                else:
+                    """ start calibration, measure up and down time """
+                    self.calibrate = 1
+                    self.cal_start = time.time()
+                    self.send_command("down", device)
+                    device.publish_devstate("calibrating")
+            elif command == "STOP" and self.calibrate == 1:
+                """ measure down_time """
+                self.calibrate = 2
+                device.state["down_time"] = time.time() - self.cal_start
+                self.send_command("my", device)
+                time.sleep(2)
+                self.cal_start = time.time()
+                self.send_command("up", device)
+            elif command == "STOP" and self.calibrate == 2:
+                """ measure up_time and stop calibration """
+                self.calibrate = 0
+                self.cal_start = 0
+                device.state["up_time"] = time.time() - self.cal_start
+                self.send_command("my", device)
+                device.publish_devstate("open", 100)
+                device.save()
+            elif command in cmd_lookup:
                 self.send_command(cmd_lookup[command], device)
                 device.update(command)
             else:
