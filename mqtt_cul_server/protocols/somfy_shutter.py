@@ -132,10 +132,10 @@ class SomfyShutter:
             self.cmd_time = time.time()
             if devstate == "opening":
                 self.direction = 1
-                self.drvtimer = Timer(self.state["up_time"], self.timer_open)
+                self.drv_timer = Timer(self.state["up_time"], self.timer_open)
             else:
                 self.direction = -1
-                self.drvtimer = Timer(self.state["down_time"], self.timer_closed)
+                self.drv_timer = Timer(self.state["down_time"], self.timer_closed)
             self.drv_timer.start()
             
         def update_state(self, cmd):
