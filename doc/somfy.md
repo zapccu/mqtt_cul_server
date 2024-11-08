@@ -38,7 +38,7 @@ Currently, supported device classes are `shutter` and `shade`.
 The `address` must be a 6 character long hexadecimal address. You can choose freely,
 your shutters will learn it during pairing.
 
-The encryption key (`enc_key`) and rolling_code are updated by the software each time
+The encryption key (`enc_key`) and `rolling_code` are updated by the software each time
 a command is sent. If it doesn't match the state in the shutters, they will not accept
 the command. This is the primary security function of Somfy. If you loose this key or
 only have an outdated one from a backup, you need to re-pair.
@@ -46,11 +46,13 @@ only have an outdated one from a backup, you need to re-pair.
 The `up_time` and `down_time` values are optional. These parameters specify the time needed
 for opening or closing the shutter. The values are used to calculate the current
 position if the shutter is stopped.
-One can either configure these values manually (stop the time by hand) or automatically
+
+One can either configure these values manually (stop and enter the time by hand) or automatically
 by sending a CALIBRATE command. After sending CALIBRATE the state of the device is
 changing to "calibrating" and the shutter is closing. As soon as the shutter is 
-closed, press STOP. Two seconds later the shutter will be opened. When it's open,
+closed, press STOP. Two seconds later the shutter will be opened again. When it's open,
 press STOP again.
+
 Calibration can be interrupted by sending the CALIBRATE command again.
 If up_time and down_time are not speicified, only states "open" and "closed" are reported.
 
