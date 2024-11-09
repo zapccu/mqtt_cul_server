@@ -273,7 +273,7 @@ class SomfyShutter:
                 device = d
                 break
         if not device:
-            logging.error("Device not found: %s", address)
+            logging.error("Device with address %s not found", address)
 
         if topic == "set":
             cmd_lookup = { "OPEN": "up", "CLOSE": "down", "STOP": "my", "PROG": "prog" }
@@ -281,11 +281,13 @@ class SomfyShutter:
             if command == "CALIBRATE":
                 if self.calibrate > 0:
                     """ interrupt calibration """
+                    logging.info("Calibration of device %s cancelled", address)
                     self.calibrate = 0
                     self.cal_start = 0
                     device.publish_devstate("stopped")
                 else:
                     """ start calibration, measure up and down time """
+                    logging.info("Calibration of device %s started", address)
                     self.calibrate = 1
                     self.cal_start = time.time()
                     self.send_command("down", device)
@@ -295,6 +297,7 @@ class SomfyShutter:
                 """ measure down_time """
                 self.calibrate = 2
                 device.state["down_time"] = int(time.time() - self.cal_start)
+                logging.info("Measured down time of %d seconds for device %s", device.state["down_time"], address)
                 self.send_command("my", device)    # also save state to file incl. down_time
                 time.sleep(2)
                 self.cal_start = time.time()
@@ -305,6 +308,8 @@ class SomfyShutter:
                 self.calibrate = 0
                 self.cal_start = 0
                 device.state["up_time"] = int(time.time() - self.cal_start)
+                logging.info("Measured up time of %d seconds for device %s", device.state["up_time"], address)
+                logging.ingo("Device %s calibrated", address)
                 self.send_command("my", device)    # also save state to file incl. up_time
                 device.publish_devstate("open", 100)
                 
