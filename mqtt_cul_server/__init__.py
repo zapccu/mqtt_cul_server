@@ -26,7 +26,7 @@ class MQTT_CUL_Server:
         if config["lacrosse"].getboolean("enabled"):
             self.components["lacrosse"] = lacrosse.LaCrosse(self.cul, self.mqtt_client, self.prefix)
         
-		# Register signal handler
+        # Register signal handler
         signal.signal(signal.SIGTERM, self.signal_handler)
 
     def signal_handler(self, sig, frame):

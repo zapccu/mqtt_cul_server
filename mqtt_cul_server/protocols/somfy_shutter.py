@@ -68,7 +68,7 @@ class SomfyShutter:
             # Publish configuration
             self.mqtt_client.publish(self.base_path + "/config", payload=json.dumps(configuration), retain=True)
             
-			# Publish current state and position
+            # Publish current state and position
             if "current_pos" in self.state:
                 if self.state["current_pos"] == 100:
                     self.publish_devstate("open", 100)
@@ -149,7 +149,7 @@ class SomfyShutter:
                     
             elif cmd == "CLOSE":
                 if "down_time" in self.state:
-                    print(f"opening. setting timer to {self.state['down_time']}")
+                    print(f"closing. setting timer to {self.state['down_time']}")
                     self.start_timer("closing")
                 else:
                     self.publish_devstate("closed", position=0)
@@ -253,8 +253,12 @@ class SomfyShutter:
         device.increase_rolling_code()
 
     def on_message(self, message):
-        prefix, devicetype, component, address, topic = message.topic.rsplit("/", 4)
-        command = message.payload.decode()
+        try:
+            prefix, devicetype, component, address, topic = message.topic.rsplit("/", 4)
+            command = message.payload.decode()
+        except ValueError:
+            logging.debug("cannot parse topic: %s", message.topic)
+            return            
 
         if prefix != self.prefix:
             logging.info("Ignoring message due to prefix")
