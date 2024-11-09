@@ -63,13 +63,13 @@ class MQTT_CUL_Server:
         try:
             _, _, component, _ = msg.topic.split("/", 3)
         except ValueError:
-            logging.debug("cannot parse topic: %s", msg.topic)
+            logging.error("cannot parse topic: %s", msg.topic)
             return
 
         if component in self.components:
             self.components[component].on_message(msg)
         else:
-            logging.debug("component %s unknown (topic %s)", component, msg.topic)
+            logging.warning("component %s unknown (topic %s)", component, msg.topic)
 
     def on_rf_message(self, message):
         """Handle message received via RF"""
@@ -77,7 +77,7 @@ class MQTT_CUL_Server:
         if message[0:3] == "N01":
             self.components["lacrosse"].on_rf_message(message)
         else:
-            logging.info("Can't handle RF message: %s", message)
+            logging.error("Can't handle RF message: %s", message)
 
     def start(self):
         """Start multiple threads to listen for MQTT and RF messages"""

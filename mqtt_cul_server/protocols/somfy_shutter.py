@@ -257,16 +257,16 @@ class SomfyShutter:
             prefix, devicetype, component, address, topic = message.topic.rsplit("/", 4)
             command = message.payload.decode()
         except ValueError:
-            logging.debug("cannot parse topic: %s", message.topic)
+            logging.error("cannot parse topic: %s", message.topic)
             return            
 
         if prefix != self.prefix:
-            logging.info("Ignoring message due to prefix")
+            logging.warning("Ignoring message due to prefix")
             return
         if devicetype != "cover":
-            raise ValueError("Somfy can only handle covers")
+            logging.error("Unsupported device type %s", devicetype)
         if component != "somfy":
-            raise ValueError("Received command for different component")
+            logging.error("Received command for different component %s", component)
 
         device = None
         for d in self.devices:
@@ -274,7 +274,7 @@ class SomfyShutter:
                 device = d
                 break
         if not device:
-            raise ValueError("Device not found: %s", address)
+            logging.error("Device not found: %s", address)
 
         if topic == "set":
             cmd_lookup = { "OPEN": "up", "CLOSE": "down", "STOP": "my", "PROG": "prog" }
@@ -314,6 +314,6 @@ class SomfyShutter:
                 device.update_state(command)
                 
             else:
-                raise ValueError("Command %s is not supported", command)
+                logging.error("Command %s is not supported", command)
         else:
-            logging.debug("ignoring topic %s", topic)
+            logging.warning("ignoring topic %s", topic)
