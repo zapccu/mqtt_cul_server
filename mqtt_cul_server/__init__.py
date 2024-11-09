@@ -68,8 +68,12 @@ class MQTT_CUL_Server:
 
         if component in self.components:
             self.components[component].on_message(msg)
+        """
+        The following log statement will generate warnings for each component under
+        "prefix". This makes no sense => commented it out
         else:
             logging.warning("component %s unknown (topic %s)", component, msg.topic)
+        """
 
     def on_rf_message(self, message):
         """Handle message received via RF"""
