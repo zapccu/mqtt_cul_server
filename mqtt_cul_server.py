@@ -20,9 +20,16 @@ if __name__ == "__main__":
     config = configparser.ConfigParser()
     config.read(args.config)
 
+    level = logging.ERROR
+    logger = logging.getLogger()
     if config["DEFAULT"].getboolean("verbose"):
-        logger = logging.getLogger()
-        logger.setLevel(logging.INFO)
+        level = logging.INFO
+        
+    logfile = config["DEFAULT"].get("logfile", '')
+    if logfile != '':
+        logging.basicConfig(filename=logfile, encoding='utf-8', level=level)
+    else:
+        logger.setLevel(level)
 
     mcs = MQTT_CUL_Server(config=config)
     mcs.start()
