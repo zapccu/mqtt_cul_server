@@ -60,4 +60,3 @@ class Cul(object):
                 callback(message)
             except:
                 pass
-        print("CUL listener stopped")

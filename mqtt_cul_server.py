@@ -16,7 +16,6 @@ if __name__ == "__main__":
     parser.add_argument('--config', default='mqtt_cul_server.ini')
     args = parser.parse_args()
     
-    print(f"reading config from {args.config}")
     config = configparser.ConfigParser()
     config.read(args.config)
 

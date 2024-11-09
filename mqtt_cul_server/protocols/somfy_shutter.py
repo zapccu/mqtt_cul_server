@@ -95,18 +95,19 @@ class SomfyShutter:
             self.save()
 
             """ don't loose the code during testing ;) """
-            print("next rolling code for device", self.state["address"], " is", self.state["rolling_code"])
-            logging.info("next rolling code for device %s is %d", self.state["address"], self.state["rolling_code"])
+            logging.info("next rolling code for device %s is %d, encryption key is %d",
+                         self.state["address"], self.state["rolling_code"], self.state["enc_key"])
 
         def publish_devstate(self, devstate, position = None):
             """
             Publish state and position of shutter.
             Save state if position is specified and has changed
             """
-            print(f"publishing devstate={devstate}, position={position}")
+            logging.debug("publishing devstate %s for device %s", devstate, self.state["address"])
             self.mqtt_client.publish(self.base_path + "/state", payload=devstate, retain=True)
             if position is not None and ("current_pos" not in self.state or position != self.state["current_pos"]):
                 self.state["current_pos"] = position
+                logging.debug("publishing position %d for device %s", position, self.state["address"])
                 self.mqtt_client.publish(self.base_path + "/position", payload=position, retain=True)
                 self.save()
 
@@ -118,12 +119,10 @@ class SomfyShutter:
 
         def timer_open(self):
             """ Timer function called when shutter has been opened """
-            print("Timer open called")
             self.publish_devstate("open", position=100)
 
         def timer_closed(self):
             """ Timer function called when shutter has been closed """
-            print("Timer closed called")
             self.publish_devstate("closed", position=0)
 
         def start_timer(self, devstate):
@@ -142,14 +141,14 @@ class SomfyShutter:
             """ calculate position, publish state and position """
             if cmd == "OPEN":
                 if "up_time" in self.state:
-                    print(f"opening. setting timer to {self.state['up_time']}")
+                    logging.debug("opening device %s. setting timer to %d seconds", self.state["address"], self.state['up_time'])
                     self.start_timer("opening")
                 else:
                     self.publish_devstate("open", position=100)
                     
             elif cmd == "CLOSE":
                 if "down_time" in self.state:
-                    print(f"closing. setting timer to {self.state['down_time']}")
+                    logging.debug("closing device %s. setting timer to %d seconds", self.state["address"], self.state['down_time'])
                     self.start_timer("closing")
                 else:
                     self.publish_devstate("closed", position=0)
@@ -248,7 +247,7 @@ class SomfyShutter:
     def send_command(self, command, device):
         """Send command string via CUL device"""
         command_string = device.command_string(command)
-        logging.info("sending command string %s to %s", command_string, device.state["name"])
+        logging.debug("sending command string %s to %s", command_string, device.state["name"])
         self.cul.send_command(command_string)
         device.increase_rolling_code()
 
