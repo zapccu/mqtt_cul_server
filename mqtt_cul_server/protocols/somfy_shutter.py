@@ -251,6 +251,10 @@ class SomfyShutter:
         self.cul.send_command(command_string)
         device.increase_rolling_code()
 
+    def on_rf_message(self, message):
+        """ dummy RF message handler """
+        logging.debug("received message %s", message)
+        
     def on_message(self, message):
         try:
             prefix, devicetype, component, address, topic = message.topic.rsplit("/", 4)
