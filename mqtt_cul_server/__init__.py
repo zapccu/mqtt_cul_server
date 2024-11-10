@@ -78,9 +78,9 @@ class MQTT_CUL_Server:
     def on_rf_message(self, message):
         """
         Handle message received via RF
-        Hint: This function is also called when a command has been send to a device
+        SOMFY: This function is also called when a command has been send to a device
+        with the acknowledge message (same enc_key and rolling code)
         => Added a dummy message handler for Somfy.
-        => Intertechno devices will still report an error.
         """
         if not message: return
         if message[0:3] == "N01":

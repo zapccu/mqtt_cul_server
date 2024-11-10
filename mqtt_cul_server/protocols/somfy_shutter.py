@@ -253,7 +253,7 @@ class SomfyShutter:
 
     def on_rf_message(self, message):
         """ dummy RF message handler """
-        logging.debug("received message %s", message)
+        logging.debug("received SOMFY message %s", message)
         
     def on_message(self, message):
         """ MQTT message handler """
