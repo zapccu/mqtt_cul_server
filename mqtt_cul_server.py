@@ -23,6 +23,8 @@ if __name__ == "__main__":
     logger = logging.getLogger()
     if config["DEFAULT"].getboolean("verbose"):
         level = logging.INFO
+    if config["DEFAULT"].getboolean("debug"):
+        level = logging.DEBUG
         
     logfile = config["DEFAULT"].get("logfile", '')
     if logfile != '':
