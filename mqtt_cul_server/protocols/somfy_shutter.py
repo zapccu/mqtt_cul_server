@@ -256,6 +256,7 @@ class SomfyShutter:
         logging.debug("received message %s", message)
         
     def on_message(self, message):
+        """ MQTT message handler """
         try:
             prefix, devicetype, component, address, topic = message.topic.rsplit("/", 4)
             command = message.payload.decode()
