@@ -292,7 +292,8 @@ class SomfyShutter:
                     device.publish_devstate("stopped")
                 else:
                     """ start calibration, measure up and down time """
-                    logging.info("Calibration of device %s started", address)
+                    logging.info("Calibration of device %s started. Measuring down time. Press STOP when shutter is closed and drive has stopped",
+                                 address)
                     self.calibrate = 1
                     self.cal_start = time.time()
                     self.send_command("down", device)
@@ -302,9 +303,10 @@ class SomfyShutter:
                 """ measure down_time """
                 self.calibrate = 2
                 device.state["down_time"] = int(time.time() - self.cal_start)
-                logging.info("Measured down time of %d seconds for device %s", device.state["down_time"], address)
-                self.send_command("my", device)    # also save state to file incl. down_time
-                time.sleep(2)
+                logging.info("Measured down time of %d seconds for device %s. Waiting 5 seconds before measuring up time",
+                             device.state["down_time"], address)
+                time.sleep(5)
+                logging.info("Measuring up time for device %s. Press STOP when shutter is open and drive has stopped", address)
                 self.cal_start = time.time()
                 self.send_command("up", device)
                 
