@@ -198,19 +198,20 @@ class SomfyShutter:
             SSSSSS - Address (= remote channel)
             """
             commands = {
-                "my": 1,
-                "up": 2,
-                "my-up": 3,
-                "down": 4,
-                "my-down": 5,
-                "up-down": 6,
-                "my-up-down": 7,
-                "prog": 8,
-                "enable-sun": 9,
-                "disable-sun": 10,
+                "my": "10",
+                "stop": "11",
+                "up": "20",
+                "my-up": "30",
+                "down": "40",
+                "my-down": "50",
+                "up-down": "60",
+                "my-up-down": "70",
+                "prog": "80",
+                "wind-sun": "90",
+                "wind-only": "A0"
             }
             if command in commands:
-                command_string = "A{:01X}{:01X}0{:04X}{}".format(
+                command_string = "A{:01X}{}{:04X}{}".format(
                     self.state["enc_key"],
                     commands[command],
                     self.state["rolling_code"],
@@ -254,6 +255,13 @@ class SomfyShutter:
     def on_rf_message(self, message):
         """ dummy RF message handler """
         logging.debug("received SOMFY message %s", message)
+        if len(message) == 16:
+            enc_key = message[2:4]
+            cmd = message[4:6]
+            rolling_code = message[6:10]
+            # Bytes 1 and 3 must be swapped
+            address = message[14:16] + message[12:14] + message[10:12]
+            logging.info("enc_key=%s, cmd=%s, rolling_code=%s, address=%s", enc_key, cmd, rolling_code, address)     
         
     def on_message(self, message):
         """ MQTT message handler """
