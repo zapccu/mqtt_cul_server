@@ -69,7 +69,7 @@ class MQTT_CUL_Server:
         if component in self.components:
             self.components[component].on_message(msg)
         """
-        The following log statement will generate warnings for each component under
+        The following log statement will generate warnings for each unknown component under
         "prefix". This makes no sense => commented it out
         else:
             logging.warning("component %s unknown (topic %s)", component, msg.topic)
