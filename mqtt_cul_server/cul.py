@@ -42,13 +42,12 @@ class Cul(object):
                 self.serial.write(command_string)
 
                 # FIXME: this is lacrosse-specific and should not be in this class
-                self.serial.write(b"Nr1\n")
+                # self.serial.write(b"Nr1\n")
 
                 self.serial.flush()
             except serial.SerialException as e:
                 logging.error("Could not send command to CUL device %s", e)
                 sys.exit(1)
-
 
     def listen(self, callback):
         while not self.exit_loop:
