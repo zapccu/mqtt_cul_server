@@ -37,6 +37,9 @@ class SomfyShutter:
             self.cmd_time = 0        # Timestamp of last open or close command. Used to calculate stop position
             self.direction = 0       # 1 = opening, -1 = closing, 0 = stopped
             
+            if len(self.state["address"] != 6):
+                raise ValueError(f"Address in {statefile} must be 3 bytes long")
+        
             self.base_path = prefix + "/cover/somfy/" + self.state["address"]
 
             """
@@ -199,7 +202,7 @@ class SomfyShutter:
             """
             commands = {
                 "my": "10",
-                "stop": "11",
+                "stop": "10",
                 "up": "20",
                 "my-up": "30",
                 "down": "40",
@@ -214,9 +217,9 @@ class SomfyShutter:
                 command_string = "A{:01X}{}{:04X}{}".format(
                     self.state["enc_key"],
                     commands[command],
-                    self.state["rolling_code"],
-                    self.state["address"],
+                    self.state["rolling_code"]
                 )
+                command_string += self.state["address"][4:6] + self.state["address"][2:4] + self.state["address"][0:2]
             else:
                 raise NameError("unknown command")
             command_string = (
@@ -259,7 +262,7 @@ class SomfyShutter:
             enc_key = message[2:4]
             cmd = message[4:6]
             rolling_code = message[6:10]
-            # Bytes 1 and 3 must be swapped
+            # Address is is little endian. Bytes 1 and 3 must be swapped
             address = message[14:16] + message[12:14] + message[10:12]
             logging.info("enc_key=%s, cmd=%s, rolling_code=%s, address=%s", enc_key, cmd, rolling_code, address)     
         
@@ -277,8 +280,10 @@ class SomfyShutter:
             return
         if devicetype != "cover":
             logging.error("Unsupported device type %s", devicetype)
+            return
         if component != "somfy":
             logging.error("Received command for different component %s", component)
+            return
 
         device = None
         for d in self.devices:
@@ -287,6 +292,7 @@ class SomfyShutter:
                 break
         if not device:
             logging.error("Device with address %s not found", address)
+            return
 
         if topic == "set":
             cmd_lookup = { "OPEN": "up", "CLOSE": "down", "STOP": "my", "PROG": "prog" }
