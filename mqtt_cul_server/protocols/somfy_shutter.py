@@ -139,13 +139,13 @@ class SomfyShutter:
                 self.direction = 1
                 timeout = self.state["up_time"]
                 if "current_pos" in self.state:
-                    timeout *= (1 - self.state["current_pos"] / 100) + 1
+                    timeout = timeout * (1 - self.state["current_pos"] / 100) + 1
                 self.drv_timer = Timer(timeout, self.timer_open)
             else:
                 self.direction = -1
                 timeout = self.state["down_time"]
                 if "current_pos" in self.state:
-                    timeout *= self.state["current_pos"] / 100 + 1
+                    timeout = timeout * self.state["current_pos"] / 100 + 1
                 self.drv_timer = Timer(self.state["down_time"], self.timer_closed)
                 
             self.drv_timer.start()
