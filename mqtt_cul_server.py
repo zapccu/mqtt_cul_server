@@ -5,6 +5,7 @@ import argparse
 import configparser
 import logging
 import signal
+import time
 
 from mqtt_cul_server import MQTT_CUL_Server
 
@@ -12,6 +13,8 @@ def signal_handler(sig, frame):
     """ called when SIGTERM received """
     logging.info("Received SIGTERM. Terminating")
     mcs.stop()
+    time.sleep(1)
+    sys.exit(0)
         
 if __name__ == "__main__":
     """Control devices via MQTT and CUL RF USB stick"""
@@ -41,7 +44,8 @@ if __name__ == "__main__":
         logging.basicConfig(filename=logfile, encoding='utf-8', level=level)
     else:
         logger.setLevel(level)
-        
+    
+	# Signal handler
     signal.signal(signal.SIGTERM, signal_handler)
 
     mcs = MQTT_CUL_Server(config=config)
