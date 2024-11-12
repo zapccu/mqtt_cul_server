@@ -18,9 +18,8 @@ if __name__ == "__main__":
     args = parser.parse_args()
     
     config = configparser.ConfigParser()
-    try:
-        config.read(args.config)
-    except:
+    fcount = config.read(args.config)
+    if len(fcount) == 0:
         print(f"ERROR: Cannot read config file {args.config}")
         sys.exit(1)
 
