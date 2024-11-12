@@ -360,5 +360,5 @@ class SomfyShutter:
                 
             else:
                 logging.error("Command %s is not supported", command)
-        else:
+        elif topic not in ("config", "state", "position"):
             logging.warning("ignoring topic %s", topic)
