@@ -5,6 +5,7 @@ This module implements the serial protocol of culfw for the Somfy
 wireless communication protocol.
 """
 
+import sys
 import json
 import logging
 import os
@@ -253,6 +254,7 @@ class SomfyShutter:
                         logging.error("Error reading state file %s", statefile)
         except:
             logging.error("Error reading state files from directory %s", statedir + "/somfy")
+            sys.exit(1)
 
     @classmethod
     def get_component_name(cls):
