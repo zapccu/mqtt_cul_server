@@ -22,7 +22,7 @@ class MQTT_CUL_Server:
         if config["intertechno"].getboolean("enabled"):
             self.components["intertechno"] = intertechno.Intertechno(self.cul, self.mqtt_client, self.prefix, config["intertechno"])
         if config["somfy"].getboolean("enabled"):
-            statedir = config.get("DEFAULT", "statedir", "state")
+            statedir = config.get("DEFAULT", "statedir", fallback="state")
             self.components["somfy"] = somfy_shutter.SomfyShutter(self.cul, self.mqtt_client, self.prefix, statedir)
         if config["lacrosse"].getboolean("enabled"):
             self.components["lacrosse"] = lacrosse.LaCrosse(self.cul, self.mqtt_client, self.prefix)
