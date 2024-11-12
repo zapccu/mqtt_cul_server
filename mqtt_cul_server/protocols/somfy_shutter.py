@@ -243,12 +243,16 @@ class SomfyShutter:
         self.cal_start = 0
 
         self.devices = []
-        for statefile in os.listdir(statedir + "/somfy/"):
-            if ".json" in statefile:
-                try:
-                    self.devices.append(self.SomfyShutterState(mqtt_client, prefix, statedir, statefile))
-                except:
-                    logging.error("Error reading state file %s", statefile)
+
+        try:   
+            for statefile in os.listdir(statedir + "/somfy/"):
+                if ".json" in statefile:
+                    try:
+                        self.devices.append(self.SomfyShutterState(mqtt_client, prefix, statedir, statefile))
+                    except:
+                        logging.error("Error reading state file %s", statefile)
+        except:
+            logging.error("Error reading state files from directory %s", statedir + "/somfy")
 
     @classmethod
     def get_component_name(cls):

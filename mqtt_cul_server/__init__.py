@@ -15,13 +15,12 @@ class MQTT_CUL_Server:
         self.mqtt_client = self.get_mqtt_client(config["mqtt"])
 
         # prefix for all MQTT topics
-        self.prefix = config["DEFAULT"]["prefix"]
-
-        statedir = config["DEFAULT"]["statedir"] or "state"
+        self.prefix = config.get("DEFAULT", "prefix", "homeassistant")
 
         if config["intertechno"].getboolean("enabled"):
             self.components["intertechno"] = intertechno.Intertechno(self.cul, self.mqtt_client, self.prefix, config["intertechno"])
         if config["somfy"].getboolean("enabled"):
+            statedir = config.get("DEFAULT", "statedir", "state")
             self.components["somfy"] = somfy_shutter.SomfyShutter(self.cul, self.mqtt_client, self.prefix, statedir)
         if config["lacrosse"].getboolean("enabled"):
             self.components["lacrosse"] = lacrosse.LaCrosse(self.cul, self.mqtt_client, self.prefix)
