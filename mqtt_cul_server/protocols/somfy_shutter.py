@@ -38,7 +38,7 @@ class SomfyShutter:
             self.cmd_time = 0        # Timestamp of last open or close command. Used to calculate stop position
             self.direction = 0       # 1 = opening, -1 = closing, 0 = stopped
             
-            if len(self.state["address"] != 6):
+            if len(self.state["address"]) != 6:
                 raise ValueError(f"Address in {statefile} must be 3 bytes long")
         
             self.base_path = prefix + "/cover/somfy/" + self.state["address"]
