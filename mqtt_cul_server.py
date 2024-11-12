@@ -42,7 +42,7 @@ if __name__ == "__main__":
     else:
         logger.setLevel(level)
     
-	# Signal handler
+    # Signal handler
     signal.signal(signal.SIGTERM, signal_handler)
 
     mcs = MQTT_CUL_Server(config=config)
