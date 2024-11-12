@@ -26,16 +26,6 @@ class MQTT_CUL_Server:
             self.components["somfy"] = somfy_shutter.SomfyShutter(self.cul, self.mqtt_client, self.prefix, statedir)
         if config["lacrosse"].getboolean("enabled"):
             self.components["lacrosse"] = lacrosse.LaCrosse(self.cul, self.mqtt_client, self.prefix)
-        
-        # Register signal handler
-        # signal.signal(signal.SIGTERM, self.signal_handler)
-
-    def signal_handler(self, sig, frame):
-        """ called when SIGTERM received """
-        logging.info("Received SIGTERM. Terminating")
-        self.cul.exit_loop = True
-        signal.pthread_kill(self.mqtt_listener.ident, signal.SIGKILL)
-        sys.exit(0)
 
     def get_mqtt_client(self, config):
         mqtt_client = mqtt.Client()
@@ -101,3 +91,8 @@ class MQTT_CUL_Server:
         # thread to listen for received RF messages
         cul_listener = threading.Thread(target=self.cul.listen, args=[self.on_rf_message])
         cul_listener.start()
+        
+    def stop(self):
+        """ stop threads """
+        self.cul.exit_loop = True
+        signal.pthread_kill(self.mqtt_listener.ident, signal.SIGKILL)       
