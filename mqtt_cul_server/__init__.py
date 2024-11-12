@@ -11,11 +11,13 @@ class MQTT_CUL_Server:
     components = {}
 
     def __init__(self, config={}):
-        self.cul = cul.Cul(config["DEFAULT"]["CUL"], int(config["DEFAULT"]["baud_rate"]))
-        self.mqtt_client = self.get_mqtt_client(config["mqtt"])
+        culdev = config.get("DEFAULT", "CUL", fallback="/dev/ttyACM0")
+        baudrate = config.get("DEFAULT", "baud_rate", fallback="115200")
+        self.cul = cul.Cul(culdev, int(baudrate))
+        self.mqtt_client = self.get_mqtt_client(config)
 
         # prefix for all MQTT topics
-        self.prefix = config.get("DEFAULT", "prefix", "homeassistant")
+        self.prefix = config.get("DEFAULT", "prefix", fallback="homeassistant")
 
         if config["intertechno"].getboolean("enabled"):
             self.components["intertechno"] = intertechno.Intertechno(self.cul, self.mqtt_client, self.prefix, config["intertechno"])
@@ -33,18 +35,18 @@ class MQTT_CUL_Server:
         self.cul.exit_loop = True
         signal.pthread_kill(self.mqtt_listener.ident, signal.SIGKILL)
 
-    def get_mqtt_client(self, mqtt_config):
+    def get_mqtt_client(self, config):
         mqtt_client = mqtt.Client()
         mqtt_client.enable_logger()
-        if "username" in mqtt_config and "password" in mqtt_config:
+        if config.has_option("mqtt", "username") and config.has_option("mqtt", "password"):
             mqtt_client.username_pw_set(
-                mqtt_config["username"], mqtt_config["password"]
+                config.get("mqtt", "username"), config.get("mqtt", "password")
             )
         mqtt_client.on_connect = self.on_mqtt_connect
         mqtt_client.on_message = self.on_mqtt_message
         try:
             mqtt_client.connect(
-                mqtt_config["host"], int(mqtt_config["port"]), keepalive=60
+                config.get("mqtt", "host", fallback="127.0.0.1"), int(config.get("mqtt", "port", fallback="1883")), keepalive=60
             )
         except Exception as e:
             logging.error("Could not connect to MQTT broker: %s", e)

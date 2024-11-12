@@ -25,12 +25,12 @@ if __name__ == "__main__":
 
     level = logging.ERROR
     logger = logging.getLogger()
-    if config["DEFAULT"].getboolean("verbose"):
+    if config.getboolean("DEFAULT", "verbose", fallback=False):
         level = logging.INFO
-    if config["DEFAULT"].getboolean("debug"):
+    if config.getboolean("DEFAULT", "debug", fallback=False):
         level = logging.DEBUG
         
-    logfile = config["DEFAULT"].get("logfile", '')
+    logfile = config.get("DEFAULT", "logfile", fallback='')
     if logfile != '':
         logging.basicConfig(filename=logfile, encoding='utf-8', level=level)
     else:
