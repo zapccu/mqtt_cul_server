@@ -25,6 +25,7 @@ class SomfyShutter:
             self.mqtt_client = mqtt_client
             
             self.statefile = statedir + "/somfy/" + statefile
+            logging.info("Reading device config from statefile %s", self.statefile)
             with open(self.statefile, "r", encoding='utf8') as file_handle:
                 self.state = json.loads(file_handle.read())
 
