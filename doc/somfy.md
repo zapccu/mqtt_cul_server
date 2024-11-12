@@ -48,12 +48,8 @@ for opening or closing the shutter. The values are used to calculate the current
 position if the shutter is stopped.
 
 One can either configure these values manually (stop and enter the time by hand) or automatically
-by sending a CALIBRATE command. After sending CALIBRATE the state of the device is
-changing to "calibrating" and the shutter is closing. As soon as the shutter is 
-closed, press STOP. Two seconds later the shutter will be opened again. When it's open,
-press STOP again.
+by sending a CALIBRATE command. 
 
-Calibration can be interrupted by sending the CALIBRATE command again.
 If up_time and down_time are not speicified, only states "open" and "closed" are reported.
 
 `current_pos` is the current position of a shutter. The default position is 100 (open).
@@ -73,3 +69,13 @@ for that (on mine it's a pinhole button on the backside.)
 Then, send the string `PROG` to the MQTT `set` topic with the address you chose
 in the config file. The exact topic name can be found by listening to the 
 discovery messages, it is e.g. `homeassistant/cover/somfy/B0C102/set`
+
+## Calibrating
+
+After sending an MQTT set command with payload CALIBRATE the state of the device is
+changing to "calibrating" and the shutter is closing. As soon as the shutter is 
+closed, press STOP. Five seconds later the shutter will be opened again. When it's open,
+press STOP again. The measured values for up_time and down_time are written to the
+state file.
+
+Calibration can be interrupted by sending the CALIBRATE command again.

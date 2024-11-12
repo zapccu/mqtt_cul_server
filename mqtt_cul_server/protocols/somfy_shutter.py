@@ -263,7 +263,7 @@ class SomfyShutter:
             rolling_code = message[6:10]
             # Address is stored in little endian format. Actually bytes 1 and 3 must be swapped
             # address = message[14:16] + message[12:14] + message[10:12]
-            address = message[10:]
+            address = message[10:16]
             
             logging.info("enc_key=%s, cmd=%s, rolling_code=%s, address=%s", enc_key, cmd, rolling_code, address)     
 
