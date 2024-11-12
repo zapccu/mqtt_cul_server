@@ -28,10 +28,11 @@ class MQTT_CUL_Server:
             self.components["lacrosse"] = lacrosse.LaCrosse(self.cul, self.mqtt_client, self.prefix)
         
         # Register signal handler
-        signal.signal(signal.SIGTERM, self.signal_handler)
+        # signal.signal(signal.SIGTERM, self.signal_handler)
 
     def signal_handler(self, sig, frame):
         """ called when SIGTERM received """
+        logging.info("Received SIGTERM. Terminating")
         self.cul.exit_loop = True
         signal.pthread_kill(self.mqtt_listener.ident, signal.SIGKILL)
         sys.exit(0)
