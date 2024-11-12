@@ -81,7 +81,7 @@ class SomfyShutter:
                 else:
                     self.publish_devstate("stopped", self.state["current_pos"])
             else:
-                self.publish_devstate("stopped", 50)    # Current position is unknown
+                self.publish_devstate("stopped")    # Current position is unknown
                   
         def save(self):
             """Save state to JSON file"""
@@ -133,12 +133,21 @@ class SomfyShutter:
             self.publish_devstate(devstate)
             self.reset_timer()
             self.cmd_time = time.time()
+            
             if devstate == "opening":
+                # Opening shutter. Remaining time until state "open" depends on current position
                 self.direction = 1
-                self.drv_timer = Timer(self.state["up_time"], self.timer_open)
+                timeout = self.state["up_time"]
+                if "current_pos" in self.state:
+                    timeout *= (1 - self.state["current_pos"] / 100) + 1
+                self.drv_timer = Timer(timeout, self.timer_open)
             else:
                 self.direction = -1
+                timeout = self.state["down_time"]
+                if "current_pos" in self.state:
+                    timeout *= self.state["current_pos"] / 100 + 1
                 self.drv_timer = Timer(self.state["down_time"], self.timer_closed)
+                
             self.drv_timer.start()
             
         def update_state(self, cmd):
