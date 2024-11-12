@@ -17,8 +17,11 @@ if __name__ == "__main__":
     args = parser.parse_args()
     
     config = configparser.ConfigParser()
-    config.read(args.config)
-
+    try:
+        config.read(args.config)
+    except:
+        print(f"ERROR: Cannot read config file {args.config}")
+        
     level = logging.ERROR
     logger = logging.getLogger()
     if config["DEFAULT"].getboolean("verbose"):
