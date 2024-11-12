@@ -34,6 +34,7 @@ class MQTT_CUL_Server:
         """ called when SIGTERM received """
         self.cul.exit_loop = True
         signal.pthread_kill(self.mqtt_listener.ident, signal.SIGKILL)
+        sys.exit(0)
 
     def get_mqtt_client(self, config):
         mqtt_client = mqtt.Client()

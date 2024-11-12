@@ -38,3 +38,5 @@ if __name__ == "__main__":
 
     mcs = MQTT_CUL_Server(config=config)
     mcs.start()
+    
+    sys.exit(0)
