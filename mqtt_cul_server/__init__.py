@@ -89,10 +89,11 @@ class MQTT_CUL_Server:
         self.mqtt_listener = threading.Thread(target=self.mqtt_client.loop_forever)
         self.mqtt_listener.start()
         # thread to listen for received RF messages
-        cul_listener = threading.Thread(target=self.cul.listen, args=[self.on_rf_message])
-        cul_listener.start()
+        self.cul_listener = threading.Thread(target=self.cul.listen, args=[self.on_rf_message])
+        self.cul_listener.start()
         
     def stop(self):
         """ stop threads """
         self.cul.exit_loop = True
+        signal.pthread_kill(self.cul_listener.ident, signal.SIGKILL)
         signal.pthread_kill(self.mqtt_listener.ident, signal.SIGKILL)       
