@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import sys
 import argparse
 import configparser
 import logging
@@ -21,7 +22,8 @@ if __name__ == "__main__":
         config.read(args.config)
     except:
         print(f"ERROR: Cannot read config file {args.config}")
-        
+        sys.exit(1)
+
     level = logging.ERROR
     logger = logging.getLogger()
     if config["DEFAULT"].getboolean("verbose"):
