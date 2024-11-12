@@ -62,7 +62,6 @@ class SomfyShutter:
                 "payload_stop": "STOP",
                 "position_topic": self.base_path + "/position",
                 "state_topic": self.base_path + "/state",
-                "optimistic": True,
                 "device_class": self.state["device_class"],
                 "name": self.state["name"],
                 "unique_id": "somfy_" + self.state["address"],
