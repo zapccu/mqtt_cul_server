@@ -256,7 +256,7 @@ class SomfyShutter:
 
     def log_message(self, message):
         """ log parts of a message """
-        if len(message) == 16:
+        if len(message) >= 16 and message[0:2] == "Ys":
             # Ignoring "Ys" at the beginning of the message
             enc_key = message[2:4]
             cmd = message[4:6]
@@ -336,16 +336,16 @@ class SomfyShutter:
                 time.sleep(5)
                 logging.info("Measuring up time for device %s. Press STOP when shutter is open and drive has stopped", address)
                 self.cal_start = time.time()
-                self.send_command("up", device)
+                self.send_command("up", device)    # Also save down time to state file
                 
             elif command == "STOP" and self.calibrate == 2:
                 """ measure up_time and stop calibration """
+                device.state["up_time"] = int(time.time() - self.cal_start)
+                device.save()
                 self.calibrate = 0
                 self.cal_start = 0
-                device.state["up_time"] = int(time.time() - self.cal_start)
                 logging.info("Measured up time of %d seconds for device %s", device.state["up_time"], address)
-                logging.ingo("Device %s calibrated", address)
-                self.send_command("my", device)    # also save state to file incl. up_time
+                logging.info("Device %s calibrated", address)
                 device.publish_devstate("open", 100)
                 
             elif command in cmd_lookup:
