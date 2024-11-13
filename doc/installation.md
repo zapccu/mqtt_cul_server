@@ -41,7 +41,7 @@ cd /var/lib/mqtt_cul_server/state
 vi myshutter.json    # example
 ```
 
-For syntax of Somfy state file see [somfy.md](/doc/somfy)
+For syntax of Somfy state file see [somfy.md](/doc/somfy.md)
 
 ## Create user and set rights
 
