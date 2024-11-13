@@ -19,6 +19,10 @@ ARMv7 processors (Raspberry Pi). An example `docker-compose.yml` is included.
 auto-discovery](https://www.home-assistant.io/docs/mqtt/discovery/), which is
 supported by this software.
 
+## Installation
+
+For installation description on a Debian / Raspbian system with a connected CUL see [installation.md](/doc/installation.md)
+
 ## Configuration
 
 ### CUL
