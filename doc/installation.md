@@ -18,7 +18,7 @@ mkdir -p /var/lib/mqtt_cul_server/state/somfy
 mkdir /var/log/mqtt_cul_server
 
 cd /opt
-git clone https://github.com/bbock/mqtt_cul_server
+git clone https://github.com/zapccu/mqtt_cul_server
 cp /opt/mqtt_cul_server/mqtt_cul_server.ini /etc/mqtt_cul_server/.
 ```
 
