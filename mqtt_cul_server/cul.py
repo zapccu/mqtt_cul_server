@@ -2,13 +2,15 @@ import sys
 import logging
 import os
 import serial
-
+import time
 
 class Cul(object):
     """Helper class to encapsulate serial communication with CUL device"""
 
     def __init__(self, serial_port, baud_rate=115200, test=False):
-        """Create instance with a given serial port"""
+        """
+        Create instance with a given serial port
+        """
         
         self.exit_loop = False
         
@@ -50,12 +52,18 @@ class Cul(object):
                 sys.exit(1)
 
     def listen(self, callback):
+        """
+        Listen for RF messages
+        """
         while not self.exit_loop:
-            # readline() blocks until message is available
             try:
+                # readline() blocks until message is available or timeout of 1s happens
                 message = self.serial.readline().decode("utf-8")
                 if message:
                     logging.debug("Received RF message: %s", message)
                 callback(message)
             except:
                 pass
+            
+			# Wait 100ms before calling readline() again. Prevent high CPU load!
+            time.sleep(0.1)

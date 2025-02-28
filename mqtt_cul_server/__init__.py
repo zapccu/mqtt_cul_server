@@ -2,6 +2,7 @@ import logging
 import sys
 import signal
 import threading
+import time
 import paho.mqtt.client as mqtt
 from . import cul
 from .protocols import somfy_shutter, intertechno, lacrosse
@@ -15,6 +16,7 @@ class MQTT_CUL_Server:
         baudrate = config.get("DEFAULT", "baud_rate", fallback="115200")
         self.cul = cul.Cul(culdev, int(baudrate))
         self.mqtt_client = self.get_mqtt_client(config)
+        self.listenLoop = False
 
         # prefix for all MQTT topics
         self.prefix = config.get("DEFAULT", "prefix", fallback="homeassistant")
@@ -52,7 +54,9 @@ class MQTT_CUL_Server:
         mqtt_client.subscribe(self.prefix + "/#")
 
     def on_mqtt_message(self, _client, _userdata, msg):
-        """The callback for when a message is received"""
+        """
+        The callback for when a message is received
+        """
         try:
             _, _, component, _ = msg.topic.split("/", 3)
         except ValueError:
@@ -83,10 +87,27 @@ class MQTT_CUL_Server:
         else:
             logging.error("Can't handle RF message: %s", message)
 
+    def loop(self):
+        """
+        Listen for MQTT command messages
+        Function currently not used. Can be enabled if CPU load is too high
+        """
+        self.listenLoop = True
+        while self.listenLoop:
+            rc = self.mqtt_client.loop(timeout=0.9)
+            if rc != 0:
+                self.listenLoop = False
+            else:
+                time.sleep(0.1)
+        
     def start(self):
-        """Start multiple threads to listen for MQTT and RF messages"""
+        """
+        Start multiple threads to listen for MQTT and RF messages
+        """
         # thread to listen for MQTT command messages
         self.mqtt_listener = threading.Thread(target=self.mqtt_client.loop_forever)
+        # if CPU load is too high, comment the previous line and uncomment the following line
+        # self.mqtt_listener = threading.Thread(target=self.loop)        
         self.mqtt_listener.start()
         # thread to listen for received RF messages
         self.cul_listener = threading.Thread(target=self.cul.listen, args=[self.on_rf_message])
