@@ -65,5 +65,5 @@ class Cul(object):
             except:
                 pass
             
-			# Wait 100ms before calling readline() again. Prevent high CPU load!
+            # Wait 100ms before calling readline() again. Prevent high CPU load!
             time.sleep(0.1)
